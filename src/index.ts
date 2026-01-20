@@ -67,6 +67,7 @@ type RuntimeChatState = {
   statusChatId: number | null;
   lastStatusText: string | null;
   lastStatusAt: number;
+  lastApprovalPolicy: string | null;
 };
 
 const runtimeState = new Map<string, RuntimeChatState>();
@@ -81,7 +82,8 @@ function getRuntime(chatId: string): RuntimeChatState {
     statusMessageId: null,
     statusChatId: null,
     lastStatusText: null,
-    lastStatusAt: 0
+    lastStatusAt: 0,
+    lastApprovalPolicy: null
   };
   runtimeState.set(chatId, created);
   return created;
@@ -90,6 +92,7 @@ function getRuntime(chatId: string): RuntimeChatState {
 function resetThread(chatId: string): void {
   const runtime = getRuntime(chatId);
   runtime.thread = null;
+  runtime.lastApprovalPolicy = null;
 }
 
 function getUserId(ctx: Context): number | null {
@@ -306,6 +309,14 @@ async function runCodexTurn(
         await store.save();
       }
 
+      const rawEvent = event as { type?: string; payload?: { approval_policy?: string } };
+      if (rawEvent.type === "turn_context") {
+        const approvalPolicy = rawEvent.payload?.approval_policy;
+        if (approvalPolicy) {
+          runtime.lastApprovalPolicy = approvalPolicy;
+        }
+      }
+
       const status = statusFromEvent(event);
       if (status) {
         await updateStatus(ctx, runtime, status);
@@ -361,11 +372,17 @@ async function handleDiff(ctx: Context, chatId: string): Promise<void> {
 async function handleStatus(ctx: Context, chatId: string): Promise<void> {
   const chatConfig = store.getOrCreateChat(chatId, defaultThreadOptions);
   const runtime = getRuntime(chatId);
+  const approvalPolicy = runtime.lastApprovalPolicy;
+  const approvalText = approvalPolicy
+    ? approvalPolicy
+    : chatConfig.threadId
+      ? "unknown"
+      : "(no session)";
   const lines = [
     `thread: ${chatConfig.threadId ?? "(new)"}`,
     `model: ${chatConfig.threadOptions.model ?? "default"}`,
     `sandbox: ${chatConfig.threadOptions.sandboxMode ?? "default"}`,
-    `approvals: ${chatConfig.threadOptions.approvalPolicy ?? "default"}`,
+    `approvals: ${approvalText}`,
     `workdir: ${chatConfig.threadOptions.workingDirectory ?? process.cwd()}`,
     `pending mentions: ${runtime.pendingMentions.length}`,
     `busy: ${runtime.busy ? "yes" : "no"}`
@@ -388,7 +405,14 @@ async function handleModel(ctx: Context, chatId: string, args: string): Promise<
 async function handleApprovals(ctx: Context, chatId: string, args: string): Promise<void> {
   const chatConfig = store.getOrCreateChat(chatId, defaultThreadOptions);
   if (!args) {
-    await ctx.reply(`Current approval policy: ${chatConfig.threadOptions.approvalPolicy ?? "default"}`);
+    const runtime = getRuntime(chatId);
+    const approvalPolicy = runtime.lastApprovalPolicy;
+    const approvalText = approvalPolicy
+      ? approvalPolicy
+      : chatConfig.threadId
+        ? "unknown"
+        : "(no session)";
+    await ctx.reply(`Current approval policy: ${approvalText}`);
     return;
   }
   const value = args.trim() as ApprovalMode;
