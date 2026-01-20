@@ -92,9 +92,19 @@ function resetThread(chatId: string): void {
   runtime.thread = null;
 }
 
+function getUserId(ctx: Context): number | null {
+  return ctx.from?.id ?? null;
+}
+
+function unauthorizedMessage(ctx: Context): string {
+  const userId = getUserId(ctx);
+  const idText = userId ? String(userId) : "unknown";
+  return `Access denied. Your user id: ${idText}`;
+}
+
 function isUserAllowed(ctx: Context): boolean {
   if (!allowedUserSet) return true;
-  const userId = ctx.from?.id;
+  const userId = getUserId(ctx);
   if (!userId) return false;
   return allowedUserSet.has(userId);
 }
@@ -460,6 +470,7 @@ function parseCommand(text: string): { command: string; args: string } | null {
 
 bot.start(async (ctx) => {
   if (!isUserAllowed(ctx)) {
+    await ctx.reply(unauthorizedMessage(ctx));
     return;
   }
   await ctx.reply("Codex bot is ready. Send a message to start a session, or /new to reset.");
@@ -467,9 +478,7 @@ bot.start(async (ctx) => {
 
 bot.on("text", async (ctx) => {
   if (!isUserAllowed(ctx)) {
-    if (ctx.chat?.type === "private") {
-      await ctx.reply("Access denied.");
-    }
+    await ctx.reply(unauthorizedMessage(ctx));
     return;
   }
   if (!ctx.message || !ctx.chat) return;
