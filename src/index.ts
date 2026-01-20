@@ -32,7 +32,7 @@ const allowedUserIds = allowedUsersEnv
   .filter(Boolean)
   .map((value) => Number.parseInt(value, 10))
   .filter((value) => Number.isFinite(value));
-const allowedUserSet = allowedUserIds.length ? new Set(allowedUserIds) : null;
+const allowedUserSet = new Set(allowedUserIds);
 
 const statePath =
   process.env.CODEX_TG_STATE_PATH ?? path.join(process.cwd(), "data", "state.json");
@@ -103,7 +103,6 @@ function unauthorizedMessage(ctx: Context): string {
 }
 
 function isUserAllowed(ctx: Context): boolean {
-  if (!allowedUserSet) return true;
   const userId = getUserId(ctx);
   if (!userId) return false;
   return allowedUserSet.has(userId);

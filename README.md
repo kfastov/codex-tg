@@ -13,7 +13,7 @@ npm run dev
 ## Environment
 
 - `TELEGRAM_BOT_TOKEN` (required)
-- `TELEGRAM_ALLOWED_USER_IDS` (optional, comma/space separated numeric user IDs; when set, only these users can use the bot in any chat)
+- `TELEGRAM_ALLOWED_USER_IDS` (comma/space separated numeric user IDs; whitelist is always enforced, so an empty value denies everyone)
 - `CODEX_API_KEY` (optional, if not using ChatGPT auth)
 - `OPENAI_BASE_URL` (optional)
 - `CODEX_WORKDIR` (optional, defaults to current directory)
