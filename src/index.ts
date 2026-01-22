@@ -351,6 +351,13 @@ async function runCodexTurn(
   }
 }
 
+function runCodexTurnInBackground(ctx: Context, chatId: string, prompt: string): void {
+  void runCodexTurn(ctx, chatId, prompt).catch((error) => {
+    // Prevent unhandled rejections; errors are already reported to the user.
+    console.error("Codex turn failed:", error);
+  });
+}
+
 async function handleDiff(ctx: Context, chatId: string): Promise<void> {
   const chatConfig = store.getOrCreateChat(chatId, defaultThreadOptions);
   const cwd = chatConfig.threadOptions.workingDirectory ?? process.cwd();
@@ -509,7 +516,7 @@ bot.on("text", async (ctx) => {
   const text = ctx.message.text.trim();
 
   if (text.startsWith("/prompts:")) {
-    await runCodexTurn(ctx, chatId, text);
+    runCodexTurnInBackground(ctx, chatId, text);
     return;
   }
 
@@ -530,13 +537,17 @@ bot.on("text", async (ctx) => {
         await handleApprovals(ctx, chatId, args);
         return;
       case "compact":
-        await runCodexTurn(ctx, chatId, "Compact the conversation into a brief summary and continue.");
+        runCodexTurnInBackground(
+          ctx,
+          chatId,
+          "Compact the conversation into a brief summary and continue."
+        );
         return;
       case "diff":
         await handleDiff(ctx, chatId);
         return;
       case "review":
-        await runCodexTurn(
+        runCodexTurnInBackground(
           ctx,
           chatId,
           "Review the working tree for issues. Focus on behavior changes, risks, and missing tests. Provide actionable findings with file references."
@@ -546,13 +557,13 @@ bot.on("text", async (ctx) => {
         await handleResume(ctx, chatId, args);
         return;
       case "mcp":
-        await runCodexTurn(ctx, chatId, "List MCP tools available in this session.");
+        runCodexTurnInBackground(ctx, chatId, "List MCP tools available in this session.");
         return;
       case "mention":
         await handleMention(ctx, chatId, args);
         return;
       case "init":
-        await runCodexTurn(ctx, chatId, "Generate an AGENTS.md file for this repository.");
+        runCodexTurnInBackground(ctx, chatId, "Generate an AGENTS.md file for this repository.");
         return;
       case "fork":
       case "logout":
@@ -569,7 +580,7 @@ bot.on("text", async (ctx) => {
     }
   }
 
-  await runCodexTurn(ctx, chatId, text);
+  runCodexTurnInBackground(ctx, chatId, text);
 });
 
 bot.launch();
