@@ -8,4 +8,4 @@ yarn-debug.log*
 
 /dist
 
-data/state.json
+data/
