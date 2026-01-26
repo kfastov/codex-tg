@@ -10,6 +10,51 @@ cp .env.example .env
 npm run dev
 ```
 
+## Run as a service (systemd, recommended)
+
+This project includes a user-level systemd service so you can run it like a daemon
+and start/stop it cleanly. User services run under your user account and have access
+to your home directory by default.
+
+### One-time setup
+
+```bash
+npm install
+npm run build
+./scripts/install-user-service.sh
+```
+
+Edit your service environment file:
+
+```bash
+${HOME}/.config/codex-telegram/.env
+```
+
+### Start/stop
+
+```bash
+systemctl --user enable --now codex-telegram
+systemctl --user status codex-telegram
+systemctl --user stop codex-telegram
+```
+
+### Update after pulling changes
+
+```bash
+npm install
+npm run build
+systemctl --user restart codex-telegram
+```
+
+### Uninstall
+
+```bash
+./scripts/uninstall-user-service.sh
+```
+
+If you need a system-wide unit instead, see `systemd/codex-telegram.service` and
+adapt the paths (run it as a dedicated user via `User=...`).
+
 ## Environment
 
 - `TELEGRAM_BOT_TOKEN` (required)
